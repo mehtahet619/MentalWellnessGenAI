@@ -33,7 +33,7 @@ function App() {
     fetchActivities();
     fetchJournalEntries();
     fetchInsights();
-  }, [language]);
+  }, [fetchActivities, fetchJournalEntries, language]);
 
   const fetchActivities = async () => {
     try {
