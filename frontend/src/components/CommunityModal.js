@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Send, Users, Heart, MessageCircle } from 'lucide-react';
 import axios from 'axios';
 
@@ -10,14 +10,7 @@ const CommunityModal = ({ isOpen, onClose, language }) => {
   const [newPost, setNewPost] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchCategories();
-      fetchPosts();
-    }
-  }, [isOpen, language, selectedCategory]);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await axios.get(`/api/community/categories?language=${language}`);
       setCategories([
@@ -27,16 +20,25 @@ const CommunityModal = ({ isOpen, onClose, language }) => {
     } catch (error) {
       console.error('Failed to fetch categories:', error);
     }
-  };
+  }, [language]);
 
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       const response = await axios.get(`/api/community/posts?category=${selectedCategory}&language=${language}&limit=10`);
       setPosts(response.data.posts);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
     }
-  };
+  }, [selectedCategory, language]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+      fetchPosts();
+    }
+  }, [isOpen, fetchCategories, fetchPosts]);
+
+
 
   const handleCreatePost = async () => {
     if (!newPost.trim()) return;

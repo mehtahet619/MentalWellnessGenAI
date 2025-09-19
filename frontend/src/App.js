@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Heart, Phone, BookOpen, Users, Palette, TrendingUp } from 'lucide-react';
 import axios from 'axios';
 import JournalModal from './components/JournalModal';
@@ -29,38 +29,38 @@ function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
-    fetchActivities();
-    fetchJournalEntries();
-    fetchInsights();
-  }, [fetchActivities, fetchJournalEntries, language]);
-
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
     try {
       const response = await axios.get(`/api/coping/activities?language=${language}`);
       setActivities(response.data.activities.slice(0, 3)); // Show top 3
     } catch (error) {
       console.error('Failed to fetch activities:', error);
     }
-  };
+  }, [language]);
 
-  const fetchJournalEntries = async () => {
+  const fetchJournalEntries = useCallback(async () => {
     try {
       const response = await axios.get(`/api/journal/entries?limit=3&language=${language}`);
       setJournalEntries(response.data.entries);
     } catch (error) {
       console.error('Failed to fetch journal entries:', error);
     }
-  };
+  }, [language]);
 
-  const fetchInsights = async () => {
+  const fetchInsights = useCallback(async () => {
     try {
       const response = await axios.get('/api/journal/insights');
       setInsights(response.data);
     } catch (error) {
       console.error('Failed to fetch insights:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchActivities();
+    fetchJournalEntries();
+    fetchInsights();
+  }, [fetchActivities, fetchJournalEntries, fetchInsights]);
 
   const handleSaveJournal = async (journalData) => {
     try {
@@ -98,7 +98,7 @@ function App() {
     } catch (error) {
       const errorMessage = {
         type: 'assistant',
-        text: language === 'hi' 
+        text: language === 'hi'
           ? 'क्षमा करें, कुछ गलत हुआ। कृपया फिर से कोशिश करें।'
           : 'Sorry, something went wrong. Please try again.'
       };
@@ -118,7 +118,7 @@ function App() {
         mood: 'custom',
         timestamp: new Date().toISOString()
       });
-      
+
       setSelectedMood([]);
       alert(language === 'hi' ? 'मूड लॉग हो गया!' : 'Mood logged!');
     } catch (error) {
@@ -178,14 +178,14 @@ function App() {
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={language === 'hi' 
-                ? 'अपनी बात यहां लिखें...' 
+              onKeyDown={handleKeyPress}
+              placeholder={language === 'hi'
+                ? 'अपनी बात यहां लिखें...'
                 : 'Share how you\'re feeling...'}
               disabled={isLoading}
             />
-            <button 
-              onClick={sendMessage} 
+            <button
+              onClick={sendMessage}
               className="send-button"
               disabled={isLoading || !inputText.trim()}
             >
@@ -196,14 +196,14 @@ function App() {
 
         <div className="sidebar">
           <div className="quick-actions">
-            <button 
+            <button
               className="action-button journal-button"
               onClick={() => setIsJournalOpen(true)}
             >
               <BookOpen size={16} />
               <span>{language === 'hi' ? 'डायरी लिखें' : 'Write Journal'}</span>
             </button>
-            <button 
+            <button
               className="action-button community-button"
               onClick={() => setIsCommunityOpen(true)}
             >
@@ -220,8 +220,8 @@ function App() {
                   key={index}
                   className={`emoji-button ${selectedMood.includes(emoji) ? 'selected' : ''}`}
                   onClick={() => {
-                    setSelectedMood(prev => 
-                      prev.includes(emoji) 
+                    setSelectedMood(prev =>
+                      prev.includes(emoji)
                         ? prev.filter(e => e !== emoji)
                         : [...prev, emoji]
                     );
@@ -232,7 +232,7 @@ function App() {
               ))}
             </div>
             {selectedMood.length > 0 && (
-              <button 
+              <button
                 onClick={logMood}
                 className="save-mood-button"
               >
