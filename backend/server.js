@@ -26,11 +26,15 @@ app.use(express.json({ limit: '10mb' }));
 const chatRoutes = require('./routes/chat');
 const moodRoutes = require('./routes/mood');
 const copingRoutes = require('./routes/coping');
+const journalRoutes = require('./routes/journal');
+const communityRoutes = require('./routes/community');
 
 // Use routes
 app.use('/api/chat', chatRoutes);
 app.use('/api/mood', moodRoutes);
 app.use('/api/coping', copingRoutes);
+app.use('/api/journal', journalRoutes);
+app.use('/api/community', communityRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

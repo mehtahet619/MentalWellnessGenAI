@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Heart, Phone } from 'lucide-react';
+import { Send, Heart, Phone, BookOpen, Users, Palette, TrendingUp } from 'lucide-react';
 import axios from 'axios';
+import JournalModal from './components/JournalModal';
+import CommunityModal from './components/CommunityModal';
 
 function App() {
   const [messages, setMessages] = useState([
@@ -15,6 +17,10 @@ function App() {
   const [selectedMood, setSelectedMood] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activities, setActivities] = useState([]);
+  const [isJournalOpen, setIsJournalOpen] = useState(false);
+  const [isCommunityOpen, setIsCommunityOpen] = useState(false);
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [insights, setInsights] = useState(null);
   const messagesEndRef = useRef(null);
 
   const moodEmojis = ['😊', '😢', '😰', '😡', '😴', '🤔', '😌'];
@@ -25,6 +31,8 @@ function App() {
 
   useEffect(() => {
     fetchActivities();
+    fetchJournalEntries();
+    fetchInsights();
   }, [language]);
 
   const fetchActivities = async () => {
@@ -33,6 +41,35 @@ function App() {
       setActivities(response.data.activities.slice(0, 3)); // Show top 3
     } catch (error) {
       console.error('Failed to fetch activities:', error);
+    }
+  };
+
+  const fetchJournalEntries = async () => {
+    try {
+      const response = await axios.get(`/api/journal/entries?limit=3&language=${language}`);
+      setJournalEntries(response.data.entries);
+    } catch (error) {
+      console.error('Failed to fetch journal entries:', error);
+    }
+  };
+
+  const fetchInsights = async () => {
+    try {
+      const response = await axios.get('/api/journal/insights');
+      setInsights(response.data);
+    } catch (error) {
+      console.error('Failed to fetch insights:', error);
+    }
+  };
+
+  const handleSaveJournal = async (journalData) => {
+    try {
+      await axios.post('/api/journal/entry', journalData);
+      fetchJournalEntries();
+      fetchInsights();
+    } catch (error) {
+      console.error('Failed to save journal entry:', error);
+      throw error;
     }
   };
 
@@ -158,6 +195,23 @@ function App() {
         </div>
 
         <div className="sidebar">
+          <div className="quick-actions">
+            <button 
+              className="action-button journal-button"
+              onClick={() => setIsJournalOpen(true)}
+            >
+              <BookOpen size={16} />
+              <span>{language === 'hi' ? 'डायरी लिखें' : 'Write Journal'}</span>
+            </button>
+            <button 
+              className="action-button community-button"
+              onClick={() => setIsCommunityOpen(true)}
+            >
+              <Users size={16} />
+              <span>{language === 'hi' ? 'समुदाय' : 'Community'}</span>
+            </button>
+          </div>
+
           <div className="mood-tracker">
             <h3>{language === 'hi' ? 'आज का मूड' : 'Today\'s Mood'}</h3>
             <div className="mood-emojis">
@@ -180,35 +234,77 @@ function App() {
             {selectedMood.length > 0 && (
               <button 
                 onClick={logMood}
-                style={{
-                  background: '#4F46E5',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  marginTop: '1rem'
-                }}
+                className="save-mood-button"
               >
                 {language === 'hi' ? 'मूड सेव करें' : 'Save Mood'}
               </button>
             )}
           </div>
 
+          {insights && insights.totalEntries > 0 && (
+            <div className="insights-panel">
+              <h3>
+                <TrendingUp size={16} />
+                {language === 'hi' ? 'आपकी प्रगति' : 'Your Progress'}
+              </h3>
+              <div className="insight-stats">
+                <div className="stat">
+                  <span className="stat-number">{insights.totalEntries}</span>
+                  <span className="stat-label">{language === 'hi' ? 'एंट्रीज' : 'entries'}</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-number">{insights.streakDays}</span>
+                  <span className="stat-label">{language === 'hi' ? 'दिन स्ट्रीक' : 'day streak'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="activities-panel">
-            <h3>{language === 'hi' ? 'सुझावित गतिविधियां' : 'Suggested Activities'}</h3>
+            <h3>
+              <Palette size={16} />
+              {language === 'hi' ? 'कॉपिंग टूलकिट' : 'Coping Toolkit'}
+            </h3>
             {activities.map((activity, index) => (
               <div key={index} className="activity-card">
                 <h4>{activity.title}</h4>
-                <p style={{ fontSize: '0.9rem', color: '#6B7280', marginTop: '0.5rem' }}>
-                  {activity.description}
-                </p>
-                <small style={{ color: '#9CA3AF' }}>{activity.duration}</small>
+                <p>{activity.description}</p>
+                <small>{activity.duration}</small>
               </div>
             ))}
           </div>
+
+          {journalEntries.length > 0 && (
+            <div className="recent-entries">
+              <h3>{language === 'hi' ? 'हाल की एंट्रीज' : 'Recent Entries'}</h3>
+              {journalEntries.slice(0, 2).map((entry) => (
+                <div key={entry.id} className="entry-preview">
+                  <div className="entry-title">{entry.title}</div>
+                  <div className="entry-preview-text">
+                    {entry.content.substring(0, 60)}...
+                  </div>
+                  <div className="entry-date">
+                    {new Date(entry.timestamp).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
+
+      <JournalModal
+        isOpen={isJournalOpen}
+        onClose={() => setIsJournalOpen(false)}
+        language={language}
+        onSave={handleSaveJournal}
+      />
+
+      <CommunityModal
+        isOpen={isCommunityOpen}
+        onClose={() => setIsCommunityOpen(false)}
+        language={language}
+      />
     </div>
   );
 }
