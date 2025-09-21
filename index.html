@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Inner Mind Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, getDocs, onSnapshot, collection, query, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Set Firebase debug level for detailed console logs
+        setLogLevel('debug');
+
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Define personas and their colors
+        const personas = {
+            'user': { name: 'You', color: 'bg-indigo-500' },
+            'joy': { name: 'Joy', color: 'bg-yellow-400' },
+            'sadness': { name: 'Sadness', color: 'bg-blue-400' },
+            'fear': { name: 'Fear', color: 'bg-purple-400' },
+            'disgust': { name: 'Disgust', color: 'bg-green-400' },
+            'anger': { name: 'Anger', color: 'bg-red-400' },
+            'subconscious': { name: 'Subconscious Mind', color: 'bg-slate-700' }
+        };
+
+        const emotionList = Object.keys(personas).filter(p => p !== 'user' && p !== 'subconscious');
+
+        let userId = null;
+        let isAuthReady = false;
+
+        const chatMessagesEl = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const subconsciousBtn = document.getElementById('subconscious-btn');
+        const userIdDisplay = document.getElementById('user-id');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const messageInputPlaceholder = document.getElementById('message-input');
+
+        // Set up the API call function
+        const callGeminiApi = async (prompt, systemPrompt) => {
+            const apiKey = "AIzaSyAYvMAN0dLeqScb5t87S5GCo_g5WTXoNH4"; // Canvas will provide this
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            let response;
+            let retries = 0;
+            const maxRetries = 5;
+            const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+            while (retries < maxRetries) {
+                try {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.status === 429) {
+                        retries++;
+                        await delay(Math.pow(2, retries) * 1000);
+                        continue;
+                    }
+                    if (!response.ok) {
+                        throw new Error(`API response status: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || 'I am unable to respond right now.';
+                } catch (error) {
+                    console.error('API call failed:', error);
+                    return 'An error occurred while getting a response.';
+                }
+            }
+        };
+        
+        const callGeminiJsonApi = async (prompt, systemPrompt, responseSchema) => {
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema,
+                }
+            };
+
+            let response;
+            let retries = 0;
+            const maxRetries = 5;
+            const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+            while (retries < maxRetries) {
+                try {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.status === 429) {
+                        retries++;
+                        await delay(Math.pow(2, retries) * 1000);
+                        continue;
+                    }
+                    if (!response.ok) {
+                        throw new Error(`API response status: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) {
+                        return JSON.parse(text);
+                    } else {
+                        throw new Error("API response text is missing.");
+                    }
+                } catch (error) {
+                    console.error('API call failed:', error);
+                    return null;
+                }
+            }
+        };
+
+        // Render message to the UI
+        const renderMessage = (sender, text) => {
+            const messageEl = document.createElement('div');
+            const isUser = sender === 'user';
+            const personaInfo = personas[sender] || { name: 'Unknown', color: 'bg-gray-400' };
+
+            messageEl.classList.add('flex', 'flex-col', 'p-4', 'rounded-xl', 'my-2', 'shadow-md', 'break-words', 'whitespace-pre-wrap');
+            messageEl.classList.add(isUser ? 'self-end' : 'self-start');
+            messageEl.classList.add(isUser ? 'bg-indigo-100' : 'bg-white');
+
+            messageEl.innerHTML = `
+                <div class="font-bold mb-1 ${isUser ? 'text-right' : 'text-left'}">${personaInfo.name}</div>
+                <div>${text}</div>
+            `;
+            chatMessagesEl.appendChild(messageEl);
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+        };
+
+        // Main message sending function
+        const sendMessage = async (sender, text, recipient) => {
+            if (!isAuthReady || !userId) {
+                console.error("User not authenticated, cannot send message.");
+                return;
+            }
+
+            const docData = {
+                sender: sender,
+                recipient: recipient,
+                text: text,
+                timestamp: serverTimestamp(),
+                userId: userId,
+            };
+
+            // Display loading spinner
+            loadingSpinner.classList.remove('hidden');
+
+            try {
+                const conversationRef = collection(db, `artifacts/${appId}/public/data/conversations`);
+                await addDoc(conversationRef, docData);
+
+                if (sender === 'user') {
+                    await triggerEmotionResponses(text);
+                }
+            } catch (e) {
+                console.error("Error adding document: ", e);
+            } finally {
+                loadingSpinner.classList.add('hidden');
+            }
+        };
+
+        const triggerEmotionResponses = async (userText) => {
+            // Get the last 10 messages to provide context
+            const q = query(collection(db, `artifacts/${appId}/public/data/conversations`));
+            const querySnapshot = await getDocs(q);
+            const messages = [];
+            querySnapshot.forEach((doc) => {
+                messages.push(doc.data());
+            });
+            const conversationHistory = messages.slice(-10).map(msg => `${personas[msg.sender].name}: ${msg.text}`).join('\n');
+        
+            const systemPrompt = `You are a group of five distinct, emotional personas: Joy, Sadness, Fear, Disgust, and Anger. You are having a group chat. The user has just sent a message. Respond as a group. Your goal is to react to the user's message and, if appropriate, to each other's opinions.
+            
+            Each of you must generate a response. The response must be a JSON array of objects. Each object in the array must have two properties: 'persona' (the name of the emotion speaking) and 'message' (the message they are sending). The order of the objects in the array represents the order of the messages in the chat.
+            
+            Joy: Always optimistic, finds the bright side, and offers cheerful encouragement.
+            Sadness: Melancholic, empathetic, and gentle. Acknowledges feelings of sadness.
+            Fear: Anxious, cautious, and on the lookout for potential risks.
+            Disgust: Critical, judgmental, and expresses strong disapproval of what is wrong or distasteful.
+            Anger: Fiery, direct, and focused on injustice or unfairness.
+
+            You must respond as a group. The conversation should feel like a multi-party chat where emotions react to each other.`;
+        
+            const userPrompt = `The user said: "${userText}". The recent conversation history is: ${conversationHistory}\n\nWhat are your combined responses?`;
+            
+            const responseSchema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        "persona": { "type": "STRING" },
+                        "message": { "type": "STRING" }
+                    },
+                    "propertyOrdering": ["persona", "message"]
+                }
+            };
+        
+            try {
+                const apiResponse = await callGeminiJsonApi(userPrompt, systemPrompt, responseSchema);
+                if (apiResponse && Array.isArray(apiResponse)) {
+                    for (const emotionResponse of apiResponse) {
+                        if (emotionResponse.persona && emotionResponse.message) {
+                            await sendMessage(emotionResponse.persona.toLowerCase(), emotionResponse.message, 'group');
+                        }
+                    }
+                } else {
+                    console.error("Invalid API response format.");
+                }
+            } catch (e) {
+                console.error("Error with multi-agent response: ", e);
+            }
+        };
+
+        const handleSubconsciousRequest = async () => {
+            if (!isAuthReady || !userId) return;
+
+            // Fetch recent conversation history
+            const messages = [];
+            const q = query(collection(db, `artifacts/${appId}/public/data/conversations`));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((doc) => {
+                messages.push(doc.data());
+            });
+
+            const conversationText = messages.map(msg => `${personas[msg.sender].name}: ${msg.text}`).join('\n');
+
+            const subconsciousPrompt = `You are the Subconscious Mind. Your role is to analyze a conversation between a user and their inner emotions (Joy, Sadness, Anger, Fear, Disgust). Based on the conversation history below, provide a final, balanced, and insightful decision or summary. Do not take a side; instead, synthesize all points of view to offer a complete perspective. Explain the core conflict or situation and then offer a path forward that acknowledges all the emotions involved.
+
+            Conversation History:
+            ${conversationText}
+
+            Please provide your final decision or conclusion.`;
+
+            // Display loading spinner
+            loadingSpinner.classList.remove('hidden');
+
+            try {
+                const decision = await callGeminiApi(subconsciousPrompt, "You are the Subconscious Mind, providing a final decision.");
+                await sendMessage('subconscious', decision, 'group');
+            } catch (e) {
+                console.error("Error getting subconscious decision: ", e);
+            } finally {
+                // Hide loading spinner
+                loadingSpinner.classList.add('hidden');
+            }
+        };
+
+        // Event listeners
+        sendBtn.addEventListener('click', () => {
+            const message = messageInput.value.trim();
+            if (message) {
+                sendMessage('user', message, 'group');
+                messageInput.value = '';
+            }
+        });
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendBtn.click();
+            }
+        });
+
+        subconsciousBtn.addEventListener('click', handleSubconsciousRequest);
+
+        // Authentication and Firestore listener
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                userIdDisplay.textContent = `User ID: ${userId}`;
+                isAuthReady = true;
+
+                // Listen for real-time updates to the conversation
+                const q = query(collection(db, `artifacts/${appId}/public/data/conversations`));
+                onSnapshot(q, (snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === "added") {
+                            const data = change.doc.data();
+                            if (data.userId === userId) {
+                                renderMessage(data.sender, data.text);
+                            }
+                        }
+                    });
+                });
+            } else {
+                console.log("No user signed in. Attempting to sign in.");
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        console.log("Signed in with custom token.");
+                    } else {
+                        await signInAnonymously(auth);
+                        console.log("Signed in anonymously.");
+                    }
+                } catch (error) {
+                    console.error("Authentication failed:", error);
+                }
+            }
+        });
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chat-container {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message-bubble {
+            max-width: 80%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="flex flex-col w-full max-w-2xl bg-gray-200 rounded-2xl shadow-xl overflow-hidden h-[90vh]">
+        
+        <!-- Header -->
+        <div class="bg-slate-800 text-white p-4 text-center rounded-t-2xl">
+            <h1 class="text-3xl font-bold">The Inner Mind</h1>
+            <p class="text-sm text-slate-300" id="user-id">Connecting...</p>
+        </div>
+
+        <!-- Chat messages area -->
+        <div id="chat-messages" class="chat-container flex flex-col flex-grow p-4 space-y-4">
+            <!-- Messages will be rendered here -->
+            <div class="flex flex-col p-4 rounded-xl my-2 shadow-md bg-white self-start message-bubble">
+                <div class="font-bold mb-1">System</div>
+                <div>Welcome to your inner world. All your emotions are here to chat.</div>
+            </div>
+        </div>
+
+        <!-- Input and controls area -->
+        <div class="p-4 bg-white rounded-b-2xl shadow-lg">
+            <div class="flex items-center space-x-2 mb-2 justify-center">
+                <button id="subconscious-btn" class="bg-slate-700 text-white p-2 rounded-lg shadow-md hover:bg-slate-600 transition-colors duration-200">
+                    Consult Subconscious
+                </button>
+            </div>
+            <div class="flex space-x-2">
+                <input
+                    type="text"
+                    id="message-input"
+                    class="flex-grow p-3 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                    placeholder="Chat with your emotions..."
+                />
+                <button id="send-btn" class="bg-indigo-500 text-white p-3 rounded-lg shadow-md hover:bg-indigo-600 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                </button>
+            </div>
+            <div id="loading-spinner" class="hidden absolute right-4 bottom-4 p-2 bg-gray-600 rounded-full">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
