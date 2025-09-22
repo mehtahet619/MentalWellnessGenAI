@@ -45,8 +45,8 @@
 <body>
   <h1>🎭 Multi-Emotion Chatbot with Gemini + Gradio</h1>
   <p>
-    This project is an <strong>AI-powered chatbot</strong> where five emotions—
-    <strong>Joy, Sadness, Fear, Disgust, and Anger</strong>—respond to the user in a
+    This project is an <strong>AI-powered chatbot</strong> where five emotions —
+    <strong>Joy, Sadness, Fear, Disgust, and Anger</strong> — respond to the user in a
     group-chat style. Built with <strong>Google Gemini API</strong> and
     <strong>Gradio</strong>, it creates an engaging and interactive demo of
     multi-agent conversations.
@@ -73,7 +73,7 @@ source venv/bin/activate   # On Windows: venv\Scripts\activate</code></pre>
     <li><strong>Install dependencies</strong>
       <pre><code>pip install -r requirements.txt</code></pre>
     </li>
-    <li><strong>Set up your Gemini API Key</strong>  
+    <li><strong>Set up your Gemini API Key</strong><br>
       Get an API key from <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a> and export it:
       <pre><code># Linux / macOS
 export GEMINI_API_KEY="your_api_key_here"
@@ -103,5 +103,10 @@ setx GEMINI_API_KEY "your_api_key_here"</code></pre>
     <h2>📜 License</h2>
     <p>MIT License</p>
   </div>
+
+  <hr>
+  <p><a href="https://github.com/mehtahet619/MentalWellnessGenAI" target="_blank">
+    MentalWellnessGenAI at main · mehtahet619/MentalWellnessGenAI
+  </a></p>
 </body>
 </html>
