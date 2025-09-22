@@ -1,112 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>🎭 Multi-Emotion Chatbot with Gemini + Gradio</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      line-height: 1.6;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 20px;
-      background: #fafafa;
-      color: #333;
-    }
-    h1, h2, h3 {
-      color: #222;
-    }
-    code {
-      background: #f4f4f4;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 0.95em;
-    }
-    pre {
-      background: #272822;
-      color: #f8f8f2;
-      padding: 10px;
-      border-radius: 6px;
-      overflow-x: auto;
-    }
-    ul {
-      margin-left: 20px;
-    }
-    .emoji {
-      font-size: 1.2em;
-    }
-    .license {
-      margin-top: 30px;
-      font-size: 0.9em;
-      color: #777;
-    }
-  </style>
-</head>
-<body>
-  <h1>🎭 Multi-Emotion Chatbot with Gemini + Gradio</h1>
-  <p>
-    This project is an <strong>AI-powered chatbot</strong> where five emotions —
-    <strong>Joy, Sadness, Fear, Disgust, and Anger</strong> — respond to the user in a
-    group-chat style. Built with <strong>Google Gemini API</strong> and
-    <strong>Gradio</strong>, it creates an engaging and interactive demo of
-    multi-agent conversations.
-  </p>
+# 🎭 Multi-Emotion Chatbot with Gemini + Gradio
 
-  <h2>🚀 Features</h2>
-  <ul>
-    <li>🤖 <strong>Multi-Agent Chat</strong> – Five emotions reply together, each with a unique voice.</li>
-    <li>⚡ <strong>Fast Responses (~3–5s)</strong> – Optimized prompts for speed by avoiding JSON-heavy parsing.</li>
-    <li>🖥 <strong>Interactive UI</strong> – Simple and clean Gradio interface.</li>
-    <li>📜 <strong>Conversation Memory</strong> – Keeps track of chat history.</li>
-  </ul>
+An AI-powered chatbot where five emotions — **Joy, Sadness, Fear, Disgust, and Anger** — respond to the user in a group-chat style.  
+Built with **Google Gemini API** and **Gradio**, it creates an engaging and interactive multi-agent conversation experience.
 
-  <h2>🛠 Installation</h2>
-  <ol>
-    <li><strong>Clone the repository</strong>
-      <pre><code>git clone https://github.com/your-username/emotion-chatbot.git
-cd emotion-chatbot</code></pre>
-    </li>
-    <li><strong>Create a virtual environment (optional)</strong>
-      <pre><code>python -m venv venv
-source venv/bin/activate   # On Windows: venv\Scripts\activate</code></pre>
-    </li>
-    <li><strong>Install dependencies</strong>
-      <pre><code>pip install -r requirements.txt</code></pre>
-    </li>
-    <li><strong>Set up your Gemini API Key</strong><br>
-      Get an API key from <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a> and export it:
-      <pre><code># Linux / macOS
-export GEMINI_API_KEY="your_api_key_here"
+---
 
-# Windows
-setx GEMINI_API_KEY "your_api_key_here"</code></pre>
-    </li>
-  </ol>
+## 🚀 Features
+- 🤖 **Multi-Agent Chat** – Five emotions reply together, each with a unique voice.
+- ⚡ **Fast Responses (~3–5s)** – Optimized prompts for speed by avoiding JSON-heavy parsing.
+- 🖥 **Interactive UI** – Simple and clean Gradio interface.
+- 📜 **Conversation Memory** – Maintains context from previous messages.
+- 🎯 **Subconscious Summary** – Optional final summary from “Subconscious Mind” synthesizing all emotions.
 
-  <h2>▶️ Usage</h2>
-  <p>Run the chatbot with:</p>
-  <pre><code>python app.py</code></pre>
-  <p>Then open <code>http://127.0.0.1:7860</code> in your browser.</p>
+---
 
-  <h2>📌 Example Conversation</h2>
-  <p><strong>You:</strong> I have an exam tomorrow.</p>
-  <p><strong>Bot:</strong></p>
-  <ul>
-    <li><strong>Joy:</strong> You got this, just think of how great it’ll feel when it’s done!</li>
-    <li><strong>Sadness:</strong> Exams can be stressful, I feel your worries.</li>
-    <li><strong>Fear:</strong> What if you forget something? Better revise key points.</li>
-    <li><strong>Disgust:</strong> Ugh, exams are such a drag.</li>
-    <li><strong>Anger:</strong> Why do they make us suffer with these tests?!</li>
-  </ul>
+## 🛠 Tech Stack
+- **Frontend:** Gradio
+- **Backend:** Python
+- **AI Model:** Google Gemini API
+- **Libraries:** `gradio`, `google-generativeai`, `os`, `threading`
 
-  <div class="license">
-    <h2>📜 License</h2>
-    <p>MIT License</p>
-  </div>
+---
 
-  <hr>
-  <p><a href="https://github.com/mehtahet619/MentalWellnessGenAI" target="_blank">
-    MentalWellnessGenAI at main · mehtahet619/MentalWellnessGenAI
-  </a></p>
-</body>
-</html>
+## 📂 Project Structure
+emotion-chatbot/
+│── index.html # Main chatbot application
+│── requirements.txt # Python dependencies
+│── README.md # Project documentation
+│── LICENSE # MIT License
+
+
+
+---
+
+## ⚡ Installation
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/your-username/emotion-chatbot.git
+cd emotion-chatbot
+```
+2. **Create a virtual environment (optional but recommended)**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate   # On Windows: venv\Scripts\activate
+   ```
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Set up your Gemini API Key**
+   ```bash
+   # Linux / macOSexport
+   GEMINI_API_KEY="your_api_key_here"
+   # Windows
+   setx GEMINI_API_KEY "your_api_key_here"
+    ```
+**Example Conversation**
+
+You: I have an exam tomorrow.
+Bot:
+Joy: You got this, just think of how great it’ll feel when it’s done!
+Sadness: Exams can be stressful, I feel your worries.
+Fear: What if you forget something? Better revise key points.
+Disgust: Ugh, exams are such a drag.
+Anger: Why do they make us suffer with these tests?!
+
+# Future Improvements
+
+-Multi-language support for international users.
+-Voice input/output for a more immersive experience.
+-Cloud deployment with persistent chat history.
+-Lightweight model integration for even faster responses.
+
+# License
+
+This project is licensed under the MIT [LICENSE](LICENSE) License.
